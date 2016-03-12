@@ -1,6 +1,16 @@
 # node-rpc-redis
 
-An early stage RPC client and server for Redis and Node.js.
+A minimal Redis-based RPC client/server module for Node.js.
+
+## Installation
+
+```sh
+npm install node-rpc-redis
+```
+
+## Why?
+
+I want a clean, simple and reliable way of communicating between microservices written in Node.js.
 
 ## Usage
 
