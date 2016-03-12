@@ -28,7 +28,11 @@ client.connect((connectionErr) => {
     client.disconnect()
     process.exit(1)
   } else {
-    client.call('smalltalk.greet', (callErr, result) => {
+    const params = {
+      name: 'world'
+    }
+
+    client.call('smalltalk.greet', params, (callErr, result) => {
       if (callErr) {
         // handle error
       } else {
@@ -54,7 +58,7 @@ server.connect((connectionErr) => {
     process.exit(1)
   } else {
     server.handle('smalltalk.greet', (params, cb) => {
-      cb(null, {message: 'Hello, world!'})
+      cb(null, {message: `Hello, ${params.name}!`})
     })
   }
 })
