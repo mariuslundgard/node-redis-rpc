@@ -10,7 +10,7 @@ if (!redisURL) {
 const rpc = createClient(redisURL)
 
 function doServiceCall (method, params) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const startTime = new Date().getTime()
 
     rpc.call(method, params || {}, (err, res) => {
@@ -32,17 +32,18 @@ rpc.connect((err) => {
     process.exit(1)
   } else {
     setInterval(() => {
+      const startTime = new Date().getTime()
       const stats = doServiceCall('stats.get')
       const foo = doServiceCall('foo.get')
       const bar = doServiceCall('bar.get')
 
       Promise.all([stats, foo, bar])
         .then((results) => {
-          console.log(results)
+          console.log(new Date().getTime() - startTime, results)
         })
         .catch((err) => {
-          console.log(err)
+          console.log(new Date().getTime() - startTime, err)
         })
-    }, 5000)
+    }, 2000)
   }
 })
