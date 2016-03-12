@@ -2,39 +2,43 @@
 
 const redis = require('redis')
 
-function createServer (connString) {
-  const ctx = {
-    connString: connString,
-    pubClient: null,
-    subClient: null
+function createServer (redisURL, opts) {
+  opts = (opts || {})
+
+  const ttl = opts.ttl || 5
+
+  let pubClient = null
+  let subClient = null
+
+  return {
+    connect: connect,
+    handle: handle
   }
 
-  ctx.connect = (cb) => {
-    ctx.pubClient = redis.createClient(ctx.connString)
-    ctx.subClient = redis.createClient(ctx.connString)
+  function connect (cb) {
+    pubClient = redis.createClient(redisURL)
+    subClient = redis.createClient(redisURL)
+
     cb(null)
   }
 
   function handleRequest (method, handler, req) {
-
     handler(req.params, (err, result) => {
-      ctx.pubClient.rpush(req.queue, JSON.stringify(result))
-      ctx.pubClient.expire(req.queue, 1)
+      pubClient.rpush(req.queue, JSON.stringify(result))
+      pubClient.expire(req.queue, 1)
 
-      ctx.handle(method, handler)
+      handle(method, handler)
     })
   }
 
-  ctx.handle = (method, handler) => {
-    ctx.subClient.blpop(`rpc.${method}`, 5000, (err, results) => {
+  function handle (method, handler) {
+    subClient.blpop(`rpc.${method}`, 0, (err, results) => {
       const reqText = results[1]
       const req = JSON.parse(reqText)
 
       handleRequest(method, handler, req)
     })
   }
-
-  return ctx
 }
 
 module.exports = createServer

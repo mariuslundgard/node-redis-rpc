@@ -3,27 +3,42 @@
 const redis = require('redis')
 const uuid = require('node-uuid')
 
-function createClient (connString) {
-  const ctx = {
-    connString: connString,
-    pubClient: null,
-    subClient: null
+function createClient (redisURL, opts) {
+  opts = (opts || {})
+
+  // This setting is used to determine for how long (in seconds) to block the
+  // Redis list. See `subClient.blpop` below and read more in the docs:
+  // http://redis.io/commands/BLPOP).
+  const ttl = opts.ttl || 1
+
+  // Redis client for publishing
+  let pubClient = null
+
+  // Redis client for subscribing
+  let subClient = null
+
+  return {
+    connect: connect,
+    disconnect: disconnect,
+    call: call
   }
 
-  ctx.connect = (cb) => {
-    ctx.pubClient = redis.createClient(ctx.connString)
-    ctx.subClient = redis.createClient(ctx.connString)
+  function connect (cb) {
+    pubClient = redis.createClient(redisURL)
+    subClient = redis.createClient(redisURL)
+
     cb(null)
   }
 
-  ctx.disconnect = () => {
-    ctx.pubClient.quit()
-    ctx.subClient.quit()
-    ctx.pubClient = null
-    ctx.subClient = null
+  function disconnect () {
+    pubClient.quit()
+    subClient.quit()
+
+    pubClient = null
+    subClient = null
   }
 
-  ctx.call = (method, params, cb) => {
+  function call (method, params, cb) {
     const req = {
       method: method,
       params: params,
@@ -32,10 +47,10 @@ function createClient (connString) {
 
     const reqText = JSON.stringify(req)
 
-    ctx.pubClient.rpush(`rpc.${method}`, reqText)
+    pubClient.rpush(`rpc.${method}`, reqText)
 
-    // listen for response
-    ctx.subClient.blpop(req.queue, 5, (err, result) => {
+    // Subscribe to the response queue (a redis list)
+    subClient.blpop(req.queue, ttl, (err, result) => {
       if (!result) {
         cb(new Error(`Method not found: ${method}`))
         return
@@ -52,8 +67,6 @@ function createClient (connString) {
       cb(null, res)
     })
   }
-
-  return ctx
 }
 
 module.exports = createClient
