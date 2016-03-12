@@ -24,14 +24,13 @@ const client = createClient('redis://localhost')
 // First connect to the Redis server
 client.connect((connectionErr) => {  
   if (connectionErr) {
-    // handle error
-    client.disconnect()
-    process.exit(1)
+    // Handle error and kill the process
   } else {
     const params = {
       name: 'world'
     }
 
+    // Call a routine on a remote service
     client.call('smalltalk.greet', params, (callErr, result) => {
       if (callErr) {
         // handle error
@@ -53,10 +52,9 @@ const server = createServer('redis://localhost')
 // First connect to the Redis server
 server.connect((connectionErr) => {  
   if (connectionErr) {
-    // handle error
-    server.disconnect()
-    process.exit(1)
+    // Handle error and kill the process
   } else {
+    // Handle a call from a remote service
     server.handle('smalltalk.greet', (params, cb) => {
       cb(null, {message: `Hello, ${params.name}!`})
     })
